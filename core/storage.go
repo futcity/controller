@@ -10,7 +10,11 @@
 
 package core
 
-import "github.com/futcity/controller/core/devices"
+import (
+	"errors"
+
+	"github.com/futcity/controller/core/devices"
+)
 
 // Storage All devices map
 type Storage struct {
@@ -56,4 +60,14 @@ func (s *Storage) DevicesByType(devType string) []devices.IDevice {
 	}
 
 	return list
+}
+
+// DeviceByDescription Get device by description
+func (s *Storage) DeviceByDescription(desc string) (devices.IDevice, error) {
+	for _, dev := range s.devices {
+		if dev.Description() == desc {
+			return dev, nil
+		}
+	}
+	return nil, errors.New("Device not found")
 }

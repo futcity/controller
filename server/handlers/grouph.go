@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 
 	"github.com/futcity/controller/auth"
-	"github.com/futcity/controller/core"
 	"github.com/futcity/controller/server/api"
 	"github.com/valyala/fasthttp"
 )
@@ -23,7 +22,7 @@ type GroupHandler struct {
 	aut *auth.Authorization
 }
 
-func NewGroupHandler(s *core.Storage, a *auth.Authorization) *GroupHandler {
+func NewGroupHandler(a *auth.Authorization) *GroupHandler {
 	return &GroupHandler{
 		aut: a,
 	}

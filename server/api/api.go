@@ -15,6 +15,7 @@ const (
 	// Common API
 	//
 	HttpReqGroupList = "/user/{user}/groups"
+	HttpReqDevByDesc = "/user/{user}/device/desc/{desc}"
 
 	//
 	// Relay API
@@ -41,7 +42,7 @@ const (
 //
 
 type DeviceResponse struct {
-	Operation   string `json: "operation"`
+	Operation   string `json:"operation"`
 	Result      bool   `json:"result"`
 	Error       string `json:"error"`
 	Name        string `json:"name"`
@@ -51,10 +52,10 @@ type DeviceResponse struct {
 }
 
 type GroupResponse struct {
-	Operation string   `json: "operation"`
+	Operation string   `json:"operation"`
 	Result    bool     `json:"result"`
 	Error     string   `json:"error"`
-	Groups    []string `json:"name"`
+	Groups    []string `json:"groups"`
 }
 
 //
@@ -62,9 +63,9 @@ type GroupResponse struct {
 //
 
 type RelayResponse struct {
-	Operation string `json: "operation"`
-	Result    bool   `json: "result"`
-	Error     string `json: "error"`
+	Operation string `json:"operation"`
+	Result    bool   `json:"result"`
+	Error     string `json:"error"`
 	Status    bool   `json:"status"`
 	State     bool   `json:"state"`
 }
@@ -78,10 +79,10 @@ type RelaySingleDevResponse struct {
 }
 
 type RelayDevResponse struct {
-	Operation string                   `json: "operation"`
-	Result    bool                     `json: "result"`
-	Error     string                   `json: "error"`
-	Relays    []RelaySingleDevResponse `json: "relays"`
+	Operation string                   `json:"operation"`
+	Result    bool                     `json:"result"`
+	Error     string                   `json:"error"`
+	Relays    []RelaySingleDevResponse `json:"relays"`
 }
 
 //
@@ -89,9 +90,9 @@ type RelayDevResponse struct {
 //
 
 type LightResponse struct {
-	Operation string `json: "operation"`
-	Result    bool   `json: "result"`
-	Error     string `json: "error"`
+	Operation string `json:"operation"`
+	Result    bool   `json:"result"`
+	Error     string `json:"error"`
 	Status    bool   `json:"status"`
 	State     bool   `json:"state"`
 }
@@ -105,8 +106,8 @@ type LightSingleDevResponse struct {
 }
 
 type LightDevResponse struct {
-	Operation string                   `json: "operation"`
-	Result    bool                     `json: "result"`
-	Error     string                   `json: "error"`
-	Lights    []LightSingleDevResponse `json: "lights"`
+	Operation string                   `json:"operation"`
+	Result    bool                     `json:"result"`
+	Error     string                   `json:"error"`
+	Lights    []LightSingleDevResponse `json:"lights"`
 }

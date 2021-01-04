@@ -32,6 +32,7 @@ func main() {
 	container.Provide(core.NewStorage)
 
 	container.Provide(handlers.NewGroupHandler)
+	container.Provide(handlers.NewDeviceHandler)
 	container.Provide(handlers.NewRelayHandler)
 	container.Provide(server.NewWebServer)
 

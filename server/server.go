@@ -23,13 +23,16 @@ import (
 type WebServer struct {
 	relayh *handlers.RelayHandler
 	grph   *handlers.GroupHandler
+	devh   *handlers.DeviceHandler
 }
 
 // NewWebServer Make new struct
-func NewWebServer(rh *handlers.RelayHandler, gh *handlers.GroupHandler) *WebServer {
+func NewWebServer(rh *handlers.RelayHandler, gh *handlers.GroupHandler,
+	dh *handlers.DeviceHandler) *WebServer {
 	return &WebServer{
 		relayh: rh,
 		grph:   gh,
+		devh:   dh,
 	}
 }
 
@@ -53,6 +56,7 @@ func (w *WebServer) Start(ip string, port int) error {
 	r.NotFound = w.NotFoundHandler
 
 	r.GET(api.HttpReqGroupList, w.grph.Groups)
+	r.GET(api.HttpReqDevByDesc, w.devh.DeviceByDescription)
 
 	r.GET(api.HttpReqRelayStatus, w.relayh.Status)
 	r.GET(api.HttpReqRelaySet, w.relayh.SetStatus)
