@@ -14,7 +14,6 @@ import (
 	"github.com/futcity/controller/auth"
 	"github.com/futcity/controller/configs"
 	"github.com/futcity/controller/core"
-	"github.com/futcity/controller/core/devices/base"
 	"github.com/futcity/controller/server"
 	"github.com/futcity/controller/utils"
 )
@@ -90,15 +89,8 @@ func (a *App) Start() {
 
 	// Create devices
 	for _, dev := range dc.Devices {
-		if dev.Type == "relay" {
-			a.storage.AddDevice(base.NewRelay(dev.Name, dev.Description, a.db.Relay(dev.Name), func(name string, val bool) {
-				err = a.db.UpdateRelay(name, val)
-				if err != nil {
-					a.log.Error("APP", "Update relay DB", err.Error())
-				}
-			}))
-		}
-		a.log.Info("APP", "Add new device \""+dev.Name+"\" type \""+dev.Type+"\"")
+		a.storage.AddDevice(dev.Name, dev.Description, dev.Type)
+		a.log.Info("APP", "Add new device \""+dev.Name+"\" desc \""+dev.Description+"\" type \""+dev.Type+"\"")
 	}
 
 	// Create user profiles

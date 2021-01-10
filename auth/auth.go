@@ -29,6 +29,17 @@ func (a *Authorization) AddProfile(prof *Profile) {
 	a.prof[prof.APIKey()] = prof
 }
 
+// DeleteProfile Delete user profile
+func (a *Authorization) DeleteProfile(name string) error {
+	for _, prof := range a.prof {
+		if prof.Name() == name {
+			delete(a.prof, name)
+			return nil
+		}
+	}
+	return errors.New("Profile not found")
+}
+
 // Validation Check user device by key
 func (a *Authorization) Validation(key string, device string) (bool, bool) {
 	var prof = a.prof[key]
@@ -46,6 +57,41 @@ func (a *Authorization) Validation(key string, device string) (bool, bool) {
 	}
 
 	return dev.Read(), dev.Write()
+}
+
+// Profiles Get all profiles
+func (a *Authorization) Profiles() []*Profile {
+	var profiles []*Profile
+
+	for _, prof := range a.prof {
+		profiles = append(profiles, prof)
+	}
+
+	return profiles
+}
+
+// Profiles Get profile by name
+func (a *Authorization) Profile(name string) *Profile {
+	for _, profile := range a.prof {
+		if profile.Name() == name {
+			return profile
+		}
+	}
+	return nil
+}
+
+// IsAdmin Check admin status
+func (a *Authorization) IsAdmin(key string) bool {
+	var prof = a.prof[key]
+	if prof == nil {
+		return false
+	}
+
+	if prof.Admin() {
+		return true
+	}
+
+	return false
 }
 
 // Groups Get profile groups
