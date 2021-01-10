@@ -18,18 +18,21 @@ import (
 	"github.com/futcity/controller/core"
 	"github.com/futcity/controller/core/devices/base"
 	"github.com/futcity/controller/server/api"
+	"github.com/futcity/controller/utils"
 	"github.com/valyala/fasthttp"
 )
 
 type RelayHandler struct {
 	storage *core.Storage
 	aut     *auth.Authorization
+	log     *utils.Log
 }
 
-func NewRelayHandler(s *core.Storage, a *auth.Authorization) *RelayHandler {
+func NewRelayHandler(s *core.Storage, a *auth.Authorization, l *utils.Log) *RelayHandler {
 	return &RelayHandler{
 		storage: s,
 		aut:     a,
+		log:     l,
 	}
 }
 
@@ -37,14 +40,14 @@ func (r *RelayHandler) Switch(ctx *fasthttp.RequestCtx) {
 	// Find device in storage
 	var device = r.storage.Device(ctx.UserValue("id").(string))
 	if device == nil {
-		r.Response(ctx, "switch", false, "Relay not found", nil)
+		r.response(ctx, "Switch relay", false, "Relay not found", nil)
 		return
 	}
 
 	// Check user rights
 	var _, write = r.aut.Validation(ctx.UserValue("user").(string), device.Name())
 	if !write {
-		r.Response(ctx, "switch", false, "Authorization failed", nil)
+		r.response(ctx, "Switch relay", false, "Authorization failed", nil)
 		return
 	}
 
@@ -53,21 +56,21 @@ func (r *RelayHandler) Switch(ctx *fasthttp.RequestCtx) {
 	relay.Switch()
 
 	// Send response
-	r.Response(ctx, "switch", true, "", relay)
+	r.response(ctx, "Switch relay", true, "", relay)
 }
 
 func (r *RelayHandler) SetStatus(ctx *fasthttp.RequestCtx) {
 	// Find device in storage
 	var device = r.storage.Device(ctx.UserValue("id").(string))
 	if device == nil {
-		r.Response(ctx, "set", false, "Relay not found", nil)
+		r.response(ctx, "Set relay status", false, "Relay not found", nil)
 		return
 	}
 
 	// Check user rights
 	var _, write = r.aut.Validation(ctx.UserValue("user").(string), device.Name())
 	if !write {
-		r.Response(ctx, "set", false, "Authorization failed", nil)
+		r.response(ctx, "Set relay status", false, "Authorization failed", nil)
 		return
 	}
 
@@ -75,27 +78,27 @@ func (r *RelayHandler) SetStatus(ctx *fasthttp.RequestCtx) {
 	var relay = device.(*base.Relay)
 	var status, err = strconv.ParseBool(ctx.UserValue("status").(string))
 	if err != nil {
-		r.Response(ctx, "set", false, "Fail to convert status", relay)
+		r.response(ctx, "Set relay status", false, "Fail to convert status", relay)
 		return
 	}
 	relay.SetStatus(status)
 
 	// Send response
-	r.Response(ctx, "set", true, "", relay)
+	r.response(ctx, "Set relay status", true, "", relay)
 }
 
 func (r *RelayHandler) Status(ctx *fasthttp.RequestCtx) {
 	// Find device in storage
 	var device = r.storage.Device(ctx.UserValue("id").(string))
 	if device == nil {
-		r.Response(ctx, "status", true, "Relay not found", nil)
+		r.response(ctx, "Get relay status", true, "Relay not found", nil)
 		return
 	}
 
 	// Check user rights
 	var read, _ = r.aut.Validation(ctx.UserValue("user").(string), device.Name())
 	if !read {
-		r.Response(ctx, "status", false, "Authorization failed", nil)
+		r.response(ctx, "Get relay status", false, "Authorization failed", nil)
 		return
 	}
 
@@ -103,7 +106,7 @@ func (r *RelayHandler) Status(ctx *fasthttp.RequestCtx) {
 	var relay = device.(*base.Relay)
 
 	// Send response
-	r.Response(ctx, "status", true, "", relay)
+	r.response(ctx, "Get relay status", true, "", relay)
 }
 
 func (r *RelayHandler) Devices(ctx *fasthttp.RequestCtx) {
@@ -117,21 +120,21 @@ func (r *RelayHandler) Devices(ctx *fasthttp.RequestCtx) {
 	}
 
 	// Send response
-	r.ResponseDevices(ctx, "devices", true, "", relays)
+	r.responseList(ctx, "Get relays list", true, "", relays)
 }
 
 func (r *RelayHandler) Update(ctx *fasthttp.RequestCtx) {
 	// Find device in storage
 	var device = r.storage.Device(ctx.UserValue("id").(string))
 	if device == nil {
-		r.Response(ctx, "update", false, "Relay not found", nil)
+		r.response(ctx, "Update relay", false, "Relay not found", nil)
 		return
 	}
 
 	// Check user rights
 	var _, write = r.aut.Validation(ctx.UserValue("user").(string), device.Name())
 	if !write {
-		r.Response(ctx, "switch", false, "Authorization failed", nil)
+		r.response(ctx, "Update relay", false, "Authorization failed", nil)
 		return
 	}
 
@@ -139,16 +142,16 @@ func (r *RelayHandler) Update(ctx *fasthttp.RequestCtx) {
 	var relay = device.(*base.Relay)
 	var state, err = strconv.ParseBool(ctx.UserValue("state").(string))
 	if err != nil {
-		r.Response(ctx, "update", false, "Fail to convert state", relay)
+		r.response(ctx, "Update relay", false, "Fail to convert state", relay)
 		return
 	}
 	relay.Update(state)
 
 	// Send response
-	r.Response(ctx, "update", true, "", relay)
+	r.response(ctx, "Update relay", true, "", relay)
 }
 
-func (r *RelayHandler) Response(ctx *fasthttp.RequestCtx, oper string, result bool, err string, relay *base.Relay) {
+func (r *RelayHandler) response(ctx *fasthttp.RequestCtx, oper string, result bool, err string, relay *base.Relay) {
 	ctx.Response.Header.SetContentType("application/json")
 
 	var resp = api.RelayResponse{
@@ -162,11 +165,17 @@ func (r *RelayHandler) Response(ctx *fasthttp.RequestCtx, oper string, result bo
 		resp.State = relay.State()
 	}
 
+	if result && oper != "Update relay" {
+		r.log.Info("RELAYH", oper)
+	} else {
+		r.log.Error("RELAYH", oper, err)
+	}
+
 	var bytes, _ = json.Marshal(resp)
 	ctx.Write(bytes)
 }
 
-func (r *RelayHandler) ResponseDevices(ctx *fasthttp.RequestCtx, oper string, result bool, err string, relays []*base.Relay) {
+func (r *RelayHandler) responseList(ctx *fasthttp.RequestCtx, oper string, result bool, err string, relays []*base.Relay) {
 	ctx.Response.Header.SetContentType("application/json")
 
 	var relResp = api.RelayDevResponse{
@@ -183,6 +192,12 @@ func (r *RelayHandler) ResponseDevices(ctx *fasthttp.RequestCtx, oper string, re
 			Status:      relay.Status(),
 			State:       relay.State(),
 		})
+	}
+
+	if result {
+		r.log.Info("RELAYH", oper)
+	} else {
+		r.log.Error("RELAYH", oper, err)
 	}
 
 	var bytes, _ = json.Marshal(relResp)

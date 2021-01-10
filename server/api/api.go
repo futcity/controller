@@ -36,16 +36,6 @@ const (
 	HttpReqRelaySwitch = "/user/{user}/relay/{id}/switch"
 	HttpReqRelaySet    = "/user/{user}/relay/{id}/set/{status}"
 	HttpReqRelayUpdate = "/user/{user}/relay/{id}/update/state/{state}"
-
-	//
-	// Light API
-	//
-	HttpReqLightList     = "/user/{user}/light"
-	HttpReqLightStatus   = "/user/{user}/light/{id}"
-	HttpReqLightSwitch   = "/user/{user}/light/{id}/switch"
-	HttpReqLightSet      = "/user/{user}/light/{id}/set/{status}"
-	HttpReqLightGroupSet = "/user/{user}/light/{id}/group/{group}/set/{status}"
-	HttpReqLightUpdate   = "/user/{user}/light/{id}/update/state/{state}"
 )
 
 //
@@ -137,31 +127,4 @@ type RelayDevResponse struct {
 	Result    bool                     `json:"result"`
 	Error     string                   `json:"error"`
 	Relays    []RelaySingleDevResponse `json:"relays"`
-}
-
-//
-// Light switch responses
-//
-
-type LightResponse struct {
-	Operation string `json:"operation"`
-	Result    bool   `json:"result"`
-	Error     string `json:"error"`
-	Status    bool   `json:"status"`
-	State     bool   `json:"state"`
-}
-
-type LightSingleDevResponse struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Online      bool   `json:"online"`
-	Status      bool   `json:"status"`
-	State       bool   `json:"state"`
-}
-
-type LightDevResponse struct {
-	Operation string                   `json:"operation"`
-	Result    bool                     `json:"result"`
-	Error     string                   `json:"error"`
-	Lights    []LightSingleDevResponse `json:"lights"`
 }

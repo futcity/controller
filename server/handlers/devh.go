@@ -28,13 +28,16 @@ type DeviceHandler struct {
 	aut     *auth.Authorization
 	storage *core.Storage
 	cfg     *utils.Configs
+	log     *utils.Log
 }
 
-func NewDeviceHandler(s *core.Storage, a *auth.Authorization, cfg *utils.Configs) *DeviceHandler {
+func NewDeviceHandler(s *core.Storage, a *auth.Authorization, cfg *utils.Configs,
+	l *utils.Log) *DeviceHandler {
 	return &DeviceHandler{
 		aut:     a,
 		storage: s,
 		cfg:     cfg,
+		log:     l,
 	}
 }
 
@@ -43,19 +46,19 @@ func (d *DeviceHandler) DeviceByDescription(ctx *fasthttp.RequestCtx) {
 	var desc, _ = url.QueryUnescape(ctx.UserValue("desc").(string))
 	var device, err = d.storage.DeviceByDescription(desc)
 	if err != nil {
-		d.Response(ctx, "device", false, err.Error(), "")
+		d.response(ctx, "Get device by desc", false, err.Error(), "")
 		return
 	}
 
 	// Check user rights
 	var _, write = d.aut.Validation(ctx.UserValue("user").(string), device.Name())
 	if !write {
-		d.Response(ctx, "device", false, "Authorization failed", "")
+		d.response(ctx, "Get device by desc", false, "Authorization failed", "")
 		return
 	}
 
 	// Send response
-	d.Response(ctx, "device", true, "", device.Name())
+	d.response(ctx, "Get device by desc", true, "", device.Name())
 }
 
 func (d *DeviceHandler) RemoveDevice(ctx *fasthttp.RequestCtx) {
@@ -64,33 +67,33 @@ func (d *DeviceHandler) RemoveDevice(ctx *fasthttp.RequestCtx) {
 
 	var device, err = d.storage.DeviceByID(id)
 	if err != nil {
-		d.Response(ctx, "device", false, err.Error(), "")
+		d.response(ctx, "Remove device", false, err.Error(), "")
 		return
 	}
 
 	// Check user rights
 	var _, write = d.aut.Validation(ctx.UserValue("user").(string), device.Name())
 	if !write {
-		d.Response(ctx, "device", false, "Authorization failed", "")
+		d.response(ctx, "Remove device", false, "Authorization failed", "")
 		return
 	}
 
 	// Delete device
 	err = d.storage.RemoveByID(id)
 	if err != nil {
-		d.Response(ctx, "device", false, err.Error(), "")
+		d.response(ctx, "Remove device", false, err.Error(), "")
 		return
 	}
 
 	// Send response
-	d.Response(ctx, "device", true, "", device.Name())
+	d.response(ctx, "Remove device", true, "", device.Name())
 }
 
 func (d *DeviceHandler) AddDevice(ctx *fasthttp.RequestCtx) {
 	// Check user rights
 	var admin = d.aut.IsAdmin(ctx.UserValue("user").(string))
 	if !admin {
-		d.Response(ctx, "device", false, "Authorization failed", "")
+		d.response(ctx, "Add device", false, "Authorization failed", "")
 		return
 	}
 
@@ -109,12 +112,12 @@ func (d *DeviceHandler) AddDevice(ctx *fasthttp.RequestCtx) {
 	}
 	var err = d.cfg.SaveToFile(&devices, "./devices.conf")
 	if err != nil {
-		d.Response(ctx, "device", true, "", ctx.UserValue("name").(string))
+		d.response(ctx, "Add device", true, "", ctx.UserValue("name").(string))
 		return
 	}
 
 	// Send response
-	d.Response(ctx, "device", true, "", ctx.UserValue("name").(string))
+	d.response(ctx, "Add device", true, "", ctx.UserValue("name").(string))
 }
 
 func (d *DeviceHandler) DeviceList(ctx *fasthttp.RequestCtx) {
@@ -129,10 +132,10 @@ func (d *DeviceHandler) DeviceList(ctx *fasthttp.RequestCtx) {
 	}
 
 	// Send response
-	d.ResponseList(ctx, "device", true, "", devices)
+	d.responseList(ctx, "Devices list", true, "", devices)
 }
 
-func (d *DeviceHandler) Response(ctx *fasthttp.RequestCtx, oper string, result bool, err string, name string) {
+func (d *DeviceHandler) response(ctx *fasthttp.RequestCtx, oper string, result bool, err string, name string) {
 	ctx.Response.Header.SetContentType("application/json")
 
 	var devResp = api.DeviceResponse{
@@ -142,12 +145,18 @@ func (d *DeviceHandler) Response(ctx *fasthttp.RequestCtx, oper string, result b
 		Name:      name,
 	}
 
+	if result {
+		d.log.Info("GROUPH", oper)
+	} else {
+		d.log.Error("GROUPH", oper, err)
+	}
+
 	var bytes, _ = json.Marshal(devResp)
 
 	ctx.Write(bytes)
 }
 
-func (d *DeviceHandler) ResponseList(ctx *fasthttp.RequestCtx, oper string, result bool, err string, devices []devices.IDevice) {
+func (d *DeviceHandler) responseList(ctx *fasthttp.RequestCtx, oper string, result bool, err string, devices []devices.IDevice) {
 	ctx.Response.Header.SetContentType("application/json")
 
 	var devResp = api.DeviceListResponse{
@@ -164,6 +173,12 @@ func (d *DeviceHandler) ResponseList(ctx *fasthttp.RequestCtx, oper string, resu
 			Type:        device.Type(),
 			Online:      device.Online(),
 		})
+	}
+
+	if result {
+		d.log.Info("GROUPH", oper)
+	} else {
+		d.log.Error("GROUPH", oper, err)
 	}
 
 	var bytes, _ = json.Marshal(devResp)

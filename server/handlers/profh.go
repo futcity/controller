@@ -27,13 +27,16 @@ type ProfileHandler struct {
 	aut     *auth.Authorization
 	storage *core.Storage
 	cfg     *utils.Configs
+	log     *utils.Log
 }
 
-func NewProfileHandler(s *core.Storage, a *auth.Authorization, cfg *utils.Configs) *ProfileHandler {
+func NewProfileHandler(s *core.Storage, a *auth.Authorization, c *utils.Configs,
+	l *utils.Log) *ProfileHandler {
 	return &ProfileHandler{
 		aut:     a,
 		storage: s,
-		cfg:     cfg,
+		cfg:     c,
+		log:     l,
 	}
 }
 
@@ -41,26 +44,26 @@ func (d *ProfileHandler) RemoveProfile(ctx *fasthttp.RequestCtx) {
 	// Check user rights
 	var admin = d.aut.IsAdmin(ctx.UserValue("user").(string))
 	if !admin {
-		d.response(ctx, "profile", false, "Authorization failed")
+		d.response(ctx, "Remove profile", false, "Authorization failed")
 		return
 	}
 
 	// Delete profile
 	var err = d.aut.DeleteProfile(ctx.UserValue("name").(string))
 	if err != nil {
-		d.response(ctx, "profile", false, err.Error())
+		d.response(ctx, "Remove profile", false, err.Error())
 		return
 	}
 
 	// Send response
-	d.response(ctx, "profile", true, "")
+	d.response(ctx, "Remove profile", true, "")
 }
 
 func (d *ProfileHandler) AddProfile(ctx *fasthttp.RequestCtx) {
 	// Check user rights
 	var admin = d.aut.IsAdmin(ctx.UserValue("user").(string))
 	if !admin {
-		d.response(ctx, "profile", false, "Authorization failed")
+		d.response(ctx, "Add profile", false, "Authorization failed")
 		return
 	}
 
@@ -72,21 +75,21 @@ func (d *ProfileHandler) AddProfile(ctx *fasthttp.RequestCtx) {
 	d.saveProfiles(ctx)
 
 	// Send response
-	d.response(ctx, "profile", true, "")
+	d.response(ctx, "Add profile", true, "")
 }
 
 func (d *ProfileHandler) AddProfileDevice(ctx *fasthttp.RequestCtx) {
 	// Check user rights
 	var admin = d.aut.IsAdmin(ctx.UserValue("user").(string))
 	if !admin {
-		d.response(ctx, "profile", false, "Authorization failed")
+		d.response(ctx, "Add profile device", false, "Authorization failed")
 		return
 	}
 
 	// Add profile device
 	var profile = d.aut.Profile(ctx.UserValue("name").(string))
 	if profile == nil {
-		d.response(ctx, "profile", false, "Profile not found")
+		d.response(ctx, "Add profile device", false, "Profile not found")
 		return
 	}
 
@@ -98,21 +101,21 @@ func (d *ProfileHandler) AddProfileDevice(ctx *fasthttp.RequestCtx) {
 	d.saveProfiles(ctx)
 
 	// Send response
-	d.response(ctx, "profile", true, "")
+	d.response(ctx, "Add profile device", true, "")
 }
 
 func (d *ProfileHandler) AddProfileGroup(ctx *fasthttp.RequestCtx) {
 	// Check user rights
 	var admin = d.aut.IsAdmin(ctx.UserValue("user").(string))
 	if !admin {
-		d.response(ctx, "profile", false, "Authorization failed")
+		d.response(ctx, "Add profile group", false, "Authorization failed")
 		return
 	}
 
 	// Add profile device
 	var profile = d.aut.Profile(ctx.UserValue("name").(string))
 	if profile == nil {
-		d.response(ctx, "profile", false, "Profile not found")
+		d.response(ctx, "Add profile group", false, "Profile not found")
 		return
 	}
 
@@ -123,21 +126,21 @@ func (d *ProfileHandler) AddProfileGroup(ctx *fasthttp.RequestCtx) {
 	d.saveProfiles(ctx)
 
 	// Send response
-	d.response(ctx, "profile", true, "")
+	d.response(ctx, "Add profile group", true, "")
 }
 
 func (d *ProfileHandler) RemoveProfileGroup(ctx *fasthttp.RequestCtx) {
 	// Check user rights
 	var admin = d.aut.IsAdmin(ctx.UserValue("user").(string))
 	if !admin {
-		d.response(ctx, "profile", false, "Authorization failed")
+		d.response(ctx, "Remove profile group", false, "Authorization failed")
 		return
 	}
 
 	// Delete profile group
 	var profile = d.aut.Profile(ctx.UserValue("name").(string))
 	if profile == nil {
-		d.response(ctx, "profile", false, "Profile not found")
+		d.response(ctx, "Remove profile group", false, "Profile not found")
 		return
 	}
 
@@ -148,21 +151,21 @@ func (d *ProfileHandler) RemoveProfileGroup(ctx *fasthttp.RequestCtx) {
 	d.saveProfiles(ctx)
 
 	// Send response
-	d.response(ctx, "profile", true, "")
+	d.response(ctx, "Remove profile group", true, "")
 }
 
 func (d *ProfileHandler) RemoveProfileDevice(ctx *fasthttp.RequestCtx) {
 	// Check user rights
 	var admin = d.aut.IsAdmin(ctx.UserValue("user").(string))
 	if !admin {
-		d.response(ctx, "profile", false, "Authorization failed")
+		d.response(ctx, "Remove profile device", false, "Authorization failed")
 		return
 	}
 
 	// Delete profile group
 	var profile = d.aut.Profile(ctx.UserValue("name").(string))
 	if profile == nil {
-		d.response(ctx, "profile", false, "Profile not found")
+		d.response(ctx, "Remove profile device", false, "Profile not found")
 		return
 	}
 
@@ -172,19 +175,19 @@ func (d *ProfileHandler) RemoveProfileDevice(ctx *fasthttp.RequestCtx) {
 	d.saveProfiles(ctx)
 
 	// Send response
-	d.response(ctx, "profile", true, "")
+	d.response(ctx, "Remove profile device", true, "")
 }
 
 func (d *ProfileHandler) ProfileList(ctx *fasthttp.RequestCtx) {
 	// Check user rights
 	var admin = d.aut.IsAdmin(ctx.UserValue("user").(string))
 	if !admin {
-		d.response(ctx, "profile", false, "Authorization failed")
+		d.response(ctx, "Profile list", false, "Authorization failed")
 		return
 	}
 
 	// Send response
-	d.responseList(ctx, "profile", true, "")
+	d.responseList(ctx, "Profile list", true, "")
 }
 
 func (d *ProfileHandler) saveProfiles(ctx *fasthttp.RequestCtx) {
@@ -211,7 +214,7 @@ func (d *ProfileHandler) saveProfiles(ctx *fasthttp.RequestCtx) {
 	}
 	var err = d.cfg.SaveToFile(&profiles, "./profiles.conf")
 	if err != nil {
-		d.response(ctx, "profile", false, err.Error())
+		d.response(ctx, "Save profile", false, err.Error())
 		return
 	}
 }
@@ -223,6 +226,12 @@ func (d *ProfileHandler) response(ctx *fasthttp.RequestCtx, oper string, result 
 		Operation: oper,
 		Result:    result,
 		Error:     err,
+	}
+
+	if result {
+		d.log.Info("PROFILEH", oper)
+	} else {
+		d.log.Error("PROFILEH", oper, err)
 	}
 
 	var bytes, _ = json.Marshal(devResp)
@@ -257,6 +266,12 @@ func (d *ProfileHandler) responseList(ctx *fasthttp.RequestCtx, oper string, res
 			}
 			devResp.Profiles = append(devResp.Profiles, p)
 		}
+	}
+
+	if result {
+		d.log.Info("PROFILEH", oper)
+	} else {
+		d.log.Error("PROFILEH", oper, err)
 	}
 
 	var bytes, _ = json.Marshal(devResp)
