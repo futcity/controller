@@ -11,9 +11,12 @@
 package main
 
 import (
+	"os"
+
 	"github.com/futcity/controller/auth"
 	"github.com/futcity/controller/configs"
 	"github.com/futcity/controller/core"
+	"github.com/futcity/controller/db"
 	"github.com/futcity/controller/server"
 	"github.com/futcity/controller/utils"
 )
@@ -25,12 +28,12 @@ type App struct {
 	aut     *auth.Authorization
 	log     *utils.Log
 	cfg     *utils.Configs
-	db      *utils.Database
+	db      *db.Database
 }
 
 // NewApp Make new struct
 func NewApp(s *core.Storage, srv *server.WebServer, a *auth.Authorization, l *utils.Log,
-	c *utils.Configs, d *utils.Database) *App {
+	c *utils.Configs, d *db.Database) *App {
 	return &App{
 		storage: s,
 		server:  srv,
@@ -51,70 +54,44 @@ func (a *App) Start() {
 	//
 	// Loading configs
 	//
-	var dc = &configs.DevCfg{}
-	var pc = &configs.ProfCfg{}
-	var ac = &configs.AppCfg{}
+	var ac configs.AppCfg
 
-	var err = a.cfg.LoadFromFile(dc, "devices.conf")
-	if err != nil {
-		a.log.Error("APP", "Fail to load device configs", err.Error())
+	if len(os.Args) > 1 {
+		var err = a.cfg.LoadFromFile(&ac, os.Args[1])
+		if err != nil {
+			a.log.Error("APP", "Fail to load configs", err.Error())
+		}
+	} else {
+		a.log.Error("APP", "Fail to load configs", "Error args count. Please add configs file path")
 		return
 	}
-	err = a.cfg.LoadFromFile(pc, "profiles.conf")
-	if err != nil {
-		a.log.Error("APP", "Fail to load profiles configs", err.Error())
-		return
-	}
-	err = a.cfg.LoadFromFile(ac, "fc.conf")
-	if err != nil {
-		a.log.Error("APP", "Fail to load app configs", err.Error())
-		return
-	}
+	a.log.Info("APP", "Configs was loaded")
 
 	//
 	// Load database
 	//
+	a.db.SetDBType(ac.Db.Type)
 	if ac.Db.Type == "text" {
-		for _, dbFile := range ac.Db.Files {
-			a.db.SetFileName(dbFile.Name, dbFile.Path)
-			a.log.Info("APP", "Add new db filename \""+dbFile.Name+"\"")
+		for _, file := range ac.Db.Files {
+			a.db.AddFilename(file.Name, file.Path)
 		}
 	}
 
-	a.db.LoadValues()
-
-	//
-	// Applying configs
-	//
-
-	// Create devices
-	for _, dev := range dc.Devices {
-		a.storage.AddDevice(dev.Name, dev.Description, dev.Type)
-		a.log.Info("APP", "Add new device \""+dev.Name+"\" desc \""+dev.Description+"\" type \""+dev.Type+"\"")
+	var err = a.db.LoadDeviceBase()
+	if err != nil {
+		a.log.Error("APP", "Fail to load device database", err.Error())
+		return
 	}
-
-	// Create user profiles
-	for _, prof := range pc.Profiles {
-		a.log.Info("APP", "Add new profile name \""+prof.Name+"\"")
-
-		var profile = auth.NewProfile(prof.Name, prof.Key, prof.Admin)
-		for _, pdev := range prof.Devices {
-			profile.AddDevice(auth.NewProfileDevice(pdev.Name, pdev.Read, pdev.Write))
-			a.log.Info("APP", "Add new profile \""+prof.Name+"\" device \""+pdev.Name+"\"")
-		}
-		for _, grp := range prof.Groups {
-			profile.AddGroup(grp)
-			a.log.Info("APP", "Add new profile \""+prof.Name+"\" group \""+grp+"\"")
-		}
-
-		a.aut.AddProfile(profile)
+	err = a.db.LoadProfileBase()
+	if err != nil {
+		a.log.Error("APP", "Fail to load profile database", err.Error())
+		return
 	}
-
-	//
-	// Free configs
-	//
-	dc = nil
-	pc = nil
+	err = a.db.LoadRelayBase()
+	if err != nil {
+		a.log.Error("APP", "Fail to load relay database", err.Error())
+		return
+	}
 
 	//
 	// Starting server

@@ -11,28 +11,31 @@
 package handlers
 
 import (
-	"encoding/json"
 	"strconv"
 
 	"github.com/futcity/controller/auth"
 	"github.com/futcity/controller/core"
 	"github.com/futcity/controller/core/devices/base"
+	"github.com/futcity/controller/db"
 	"github.com/futcity/controller/server/api"
 	"github.com/futcity/controller/utils"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/valyala/fasthttp"
 )
 
 type RelayHandler struct {
 	storage *core.Storage
 	aut     *auth.Authorization
+	db      *db.Database
 	log     *utils.Log
 }
 
-func NewRelayHandler(s *core.Storage, a *auth.Authorization, l *utils.Log) *RelayHandler {
+func NewRelayHandler(s *core.Storage, a *auth.Authorization, l *utils.Log, db *db.Database) *RelayHandler {
 	return &RelayHandler{
 		storage: s,
 		aut:     a,
 		log:     l,
+		db:      db,
 	}
 }
 
@@ -54,6 +57,13 @@ func (r *RelayHandler) Switch(ctx *fasthttp.RequestCtx) {
 	// Process operation
 	var relay = device.(*base.Relay)
 	relay.Switch()
+
+	// Save to database
+	var err = r.db.SaveRelayBase(relay.Name(), relay.Status())
+	if err != nil {
+		r.response(ctx, "Save to relay database", false, err.Error(), relay)
+		return
+	}
 
 	// Send response
 	r.response(ctx, "Switch relay", true, "", relay)
@@ -82,6 +92,13 @@ func (r *RelayHandler) SetStatus(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	relay.SetStatus(status)
+
+	// Save to database
+	err = r.db.SaveRelayBase(relay.Name(), relay.Status())
+	if err != nil {
+		r.response(ctx, "Save to relay database", false, err.Error(), relay)
+		return
+	}
 
 	// Send response
 	r.response(ctx, "Set relay status", true, "", relay)
@@ -152,6 +169,7 @@ func (r *RelayHandler) Update(ctx *fasthttp.RequestCtx) {
 }
 
 func (r *RelayHandler) response(ctx *fasthttp.RequestCtx, oper string, result bool, err string, relay *base.Relay) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	ctx.Response.Header.SetContentType("application/json")
 
 	var resp = api.RelayResponse{
@@ -176,6 +194,7 @@ func (r *RelayHandler) response(ctx *fasthttp.RequestCtx, oper string, result bo
 }
 
 func (r *RelayHandler) responseList(ctx *fasthttp.RequestCtx, oper string, result bool, err string, relays []*base.Relay) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	ctx.Response.Header.SetContentType("application/json")
 
 	var relResp = api.RelayDevResponse{

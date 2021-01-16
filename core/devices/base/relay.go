@@ -16,29 +16,23 @@ import (
 
 type Relay struct {
 	devices.Device
-	status   bool
-	state    bool
-	updateDb func(name string, val bool)
+	status bool
+	state  bool
 }
 
-func NewRelay(name string, desc string, defStatus bool, updDb func(name string, val bool)) *Relay {
+func NewRelay(name string, desc string) *Relay {
 	var dev = &Relay{}
 
-	dev.updateDb = updDb
 	dev.SetName(name)
 	dev.SetDescription(desc)
 	dev.SetOnline(false)
 	dev.SetType("relay")
-	dev.status = defStatus
 
 	return dev
 }
 
 func (r *Relay) SetStatus(value bool) {
 	r.status = value
-	if r.updateDb != nil {
-		go r.updateDb(r.Name(), value)
-	}
 }
 
 func (r *Relay) Status() bool {

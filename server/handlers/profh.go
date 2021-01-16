@@ -11,31 +11,31 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/url"
 	"strconv"
 
 	"github.com/futcity/controller/auth"
-	"github.com/futcity/controller/configs"
 	"github.com/futcity/controller/core"
+	"github.com/futcity/controller/db"
 	"github.com/futcity/controller/server/api"
 	"github.com/futcity/controller/utils"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/valyala/fasthttp"
 )
 
 type ProfileHandler struct {
 	aut     *auth.Authorization
 	storage *core.Storage
-	cfg     *utils.Configs
+	db      *db.Database
 	log     *utils.Log
 }
 
-func NewProfileHandler(s *core.Storage, a *auth.Authorization, c *utils.Configs,
+func NewProfileHandler(s *core.Storage, a *auth.Authorization, db *db.Database,
 	l *utils.Log) *ProfileHandler {
 	return &ProfileHandler{
 		aut:     a,
 		storage: s,
-		cfg:     c,
+		db:      db,
 		log:     l,
 	}
 }
@@ -55,6 +55,13 @@ func (d *ProfileHandler) RemoveProfile(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	// Save new profile list
+	err = d.db.SaveProfileBase()
+	if err != nil {
+		d.response(ctx, "Save profile", false, err.Error())
+		return
+	}
+
 	// Send response
 	d.response(ctx, "Remove profile", true, "")
 }
@@ -71,8 +78,12 @@ func (d *ProfileHandler) AddProfile(ctx *fasthttp.RequestCtx) {
 	var adm, _ = strconv.ParseBool(ctx.UserValue("admin").(string))
 	d.aut.AddProfile(auth.NewProfile(ctx.UserValue("name").(string), ctx.UserValue("key").(string), adm))
 
-	// Save to file
-	d.saveProfiles(ctx)
+	// Save new profile list
+	var err = d.db.SaveProfileBase()
+	if err != nil {
+		d.response(ctx, "Add profile", false, err.Error())
+		return
+	}
 
 	// Send response
 	d.response(ctx, "Add profile", true, "")
@@ -97,8 +108,12 @@ func (d *ProfileHandler) AddProfileDevice(ctx *fasthttp.RequestCtx) {
 	var write, _ = strconv.ParseBool(ctx.UserValue("write").(string))
 	profile.AddDevice(auth.NewProfileDevice(ctx.UserValue("device").(string), read, write))
 
-	// Save to file
-	d.saveProfiles(ctx)
+	// Save new profile list
+	var err = d.db.SaveProfileBase()
+	if err != nil {
+		d.response(ctx, "Add profile device", false, err.Error())
+		return
+	}
 
 	// Send response
 	d.response(ctx, "Add profile device", true, "")
@@ -122,8 +137,12 @@ func (d *ProfileHandler) AddProfileGroup(ctx *fasthttp.RequestCtx) {
 	var grp, _ = url.QueryUnescape(ctx.UserValue("group").(string))
 	profile.AddGroup(grp)
 
-	// Save to file
-	d.saveProfiles(ctx)
+	// Save new profile list
+	var err = d.db.SaveProfileBase()
+	if err != nil {
+		d.response(ctx, "Add profile group", false, err.Error())
+		return
+	}
 
 	// Send response
 	d.response(ctx, "Add profile group", true, "")
@@ -147,8 +166,12 @@ func (d *ProfileHandler) RemoveProfileGroup(ctx *fasthttp.RequestCtx) {
 	var grp, _ = url.QueryUnescape(ctx.UserValue("group").(string))
 	profile.RemoveGroup(grp)
 
-	// Save to file
-	d.saveProfiles(ctx)
+	// Save new profile list
+	var err = d.db.SaveProfileBase()
+	if err != nil {
+		d.response(ctx, "Remove profile group", false, err.Error())
+		return
+	}
 
 	// Send response
 	d.response(ctx, "Remove profile group", true, "")
@@ -171,8 +194,12 @@ func (d *ProfileHandler) RemoveProfileDevice(ctx *fasthttp.RequestCtx) {
 
 	profile.RemoveDevice(ctx.UserValue("device").(string))
 
-	// Save to file
-	d.saveProfiles(ctx)
+	// Save new profile list
+	var err = d.db.SaveProfileBase()
+	if err != nil {
+		d.response(ctx, "Remove profile device", false, err.Error())
+		return
+	}
 
 	// Send response
 	d.response(ctx, "Remove profile device", true, "")
@@ -190,36 +217,8 @@ func (d *ProfileHandler) ProfileList(ctx *fasthttp.RequestCtx) {
 	d.responseList(ctx, "Profile list", true, "")
 }
 
-func (d *ProfileHandler) saveProfiles(ctx *fasthttp.RequestCtx) {
-	// Save new profile list
-	var profiles configs.ProfCfg
-	for _, profile := range d.aut.Profiles() {
-		var p = configs.ProfileCfg{
-			Name:  profile.Name(),
-			Key:   profile.APIKey(),
-			Admin: profile.Admin(),
-		}
-
-		p.Groups = make([]string, len(*profile.Groups()))
-		copy(p.Groups, *profile.Groups())
-
-		for _, dev := range profile.Devices() {
-			p.Devices = append(p.Devices, configs.ProfDevCfg{
-				Name:  dev.Name(),
-				Read:  dev.Read(),
-				Write: dev.Write(),
-			})
-		}
-		profiles.Profiles = append(profiles.Profiles, p)
-	}
-	var err = d.cfg.SaveToFile(&profiles, "./profiles.conf")
-	if err != nil {
-		d.response(ctx, "Save profile", false, err.Error())
-		return
-	}
-}
-
 func (d *ProfileHandler) response(ctx *fasthttp.RequestCtx, oper string, result bool, err string) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	ctx.Response.Header.SetContentType("application/json")
 
 	var devResp = api.ProfileListResponse{
@@ -240,6 +239,7 @@ func (d *ProfileHandler) response(ctx *fasthttp.RequestCtx, oper string, result 
 }
 
 func (d *ProfileHandler) responseList(ctx *fasthttp.RequestCtx, oper string, result bool, err string) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	ctx.Response.Header.SetContentType("application/json")
 
 	var devResp = api.ProfileListResponse{

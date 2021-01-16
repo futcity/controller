@@ -11,32 +11,32 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/url"
 	"strconv"
 
 	"github.com/futcity/controller/auth"
-	"github.com/futcity/controller/configs"
 	"github.com/futcity/controller/core"
 	"github.com/futcity/controller/core/devices"
+	"github.com/futcity/controller/db"
 	"github.com/futcity/controller/server/api"
 	"github.com/futcity/controller/utils"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/valyala/fasthttp"
 )
 
 type DeviceHandler struct {
 	aut     *auth.Authorization
 	storage *core.Storage
-	cfg     *utils.Configs
+	db      *db.Database
 	log     *utils.Log
 }
 
-func NewDeviceHandler(s *core.Storage, a *auth.Authorization, cfg *utils.Configs,
+func NewDeviceHandler(s *core.Storage, a *auth.Authorization, db *db.Database,
 	l *utils.Log) *DeviceHandler {
 	return &DeviceHandler{
 		aut:     a,
 		storage: s,
-		cfg:     cfg,
+		db:      db,
 		log:     l,
 	}
 }
@@ -102,17 +102,9 @@ func (d *DeviceHandler) AddDevice(ctx *fasthttp.RequestCtx) {
 	d.storage.AddDevice(ctx.UserValue("name").(string), desc, ctx.UserValue("type").(string))
 
 	// Save new devices list
-	var devices configs.DevCfg
-	for _, device := range d.storage.Devices() {
-		devices.Devices = append(devices.Devices, configs.DeviceCfg{
-			Name:        device.Name(),
-			Description: device.Description(),
-			Type:        device.Type(),
-		})
-	}
-	var err = d.cfg.SaveToFile(&devices, "./devices.conf")
+	var err = d.db.SaveDeviceBase()
 	if err != nil {
-		d.response(ctx, "Add device", true, "", ctx.UserValue("name").(string))
+		d.response(ctx, "Save device", false, err.Error(), ctx.UserValue("name").(string))
 		return
 	}
 
@@ -136,6 +128,7 @@ func (d *DeviceHandler) DeviceList(ctx *fasthttp.RequestCtx) {
 }
 
 func (d *DeviceHandler) response(ctx *fasthttp.RequestCtx, oper string, result bool, err string, name string) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	ctx.Response.Header.SetContentType("application/json")
 
 	var devResp = api.DeviceResponse{
@@ -157,6 +150,7 @@ func (d *DeviceHandler) response(ctx *fasthttp.RequestCtx, oper string, result b
 }
 
 func (d *DeviceHandler) responseList(ctx *fasthttp.RequestCtx, oper string, result bool, err string, devices []devices.IDevice) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	ctx.Response.Header.SetContentType("application/json")
 
 	var devResp = api.DeviceListResponse{

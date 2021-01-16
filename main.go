@@ -15,6 +15,7 @@ import (
 
 	"github.com/futcity/controller/auth"
 	"github.com/futcity/controller/core"
+	"github.com/futcity/controller/db"
 	"github.com/futcity/controller/server"
 	"github.com/futcity/controller/server/handlers"
 	"github.com/futcity/controller/utils"
@@ -26,7 +27,7 @@ func main() {
 
 	container.Provide(utils.NewLog)
 	container.Provide(utils.NewConfigs)
-	container.Provide(utils.NewDatabase)
+	container.Provide(db.NewDatabase)
 
 	container.Provide(auth.NewAuthorization)
 	container.Provide(core.NewStorage)

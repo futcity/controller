@@ -22,15 +22,13 @@ import (
 type Storage struct {
 	devices map[string]devices.IDevice
 	log     *utils.Log
-	db      *utils.Database
 }
 
 // NewStorage Make new storage
-func NewStorage(log *utils.Log, db *utils.Database) *Storage {
+func NewStorage(log *utils.Log) *Storage {
 	return &Storage{
 		devices: make(map[string]devices.IDevice),
 		log:     log,
-		db:      db,
 	}
 }
 
@@ -39,12 +37,7 @@ func (s *Storage) AddDevice(name string, desc string, devType string) {
 	var device devices.IDevice
 
 	if devType == "relay" {
-		device = base.NewRelay(name, desc, s.db.Relay(name), func(rlName string, val bool) {
-			var err = s.db.UpdateRelay(rlName, val)
-			if err != nil {
-				s.log.Error("STORAGE", "Update relay DB", err.Error())
-			}
-		})
+		device = base.NewRelay(name, desc)
 	}
 	device.SetID(len(s.devices))
 	s.devices[name] = device

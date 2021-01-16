@@ -11,11 +11,10 @@
 package handlers
 
 import (
-	"encoding/json"
-
 	"github.com/futcity/controller/auth"
 	"github.com/futcity/controller/server/api"
 	"github.com/futcity/controller/utils"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/valyala/fasthttp"
 )
 
@@ -44,6 +43,7 @@ func (r *GroupHandler) Groups(ctx *fasthttp.RequestCtx) {
 }
 
 func (r *GroupHandler) responseList(ctx *fasthttp.RequestCtx, oper string, result bool, err string, groups *[]string) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	ctx.Response.Header.SetContentType("application/json")
 
 	var grpResp = api.GroupResponse{

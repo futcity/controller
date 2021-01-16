@@ -1,0 +1,43 @@
+{
+    "profiles": [
+        {
+            "name": "admin",
+            "key": "d55c83504da9b49ded1b0a8ef4b37708d20ad5a3",
+            "admin": true,
+            "groups": [
+                "Розетки"
+            ],
+            "devices": null
+        },
+        {
+            "name": "serg",
+            "key": "123456",
+            "admin": false,
+            "groups": [
+                "fsdfsdfsdf"
+            ],
+            "devices": [
+                {
+                    "name": "fdsdf324f24f2f23",
+                    "read": true,
+                    "write": true
+                }
+            ]
+        },
+        {
+            "name": "user",
+            "key": "225957d2d4b30adb12fba35b105cd47413402ded",
+            "admin": false,
+            "groups": [
+                "Розетки"
+            ],
+            "devices": [
+                {
+                    "name": "relay-pwr-all",
+                    "read": true,
+                    "write": true
+                }
+            ]
+        }
+    ]
+}
